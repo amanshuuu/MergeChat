@@ -1,6 +1,6 @@
-# 🔴 Mergechat PRO Aggregator
+# 🔴 Merge Chat PRO Aggregator
 
-**Mergechat** is a high-performance, real-time multi-platform chat aggregator designed for professional streamers. It combines direct WebSocket connections for Twitch and Kick with an integrated "Pro" mode for Restream/Streamlabs, giving you a single, unified, and honest view of your entire community.
+**Merge Chat** is a high-performance, real-time multi-platform chat aggregator designed for professional streamers. It combines direct WebSocket connections for Twitch and Kick with an integrated "Pro" mode for Restream/Streamlabs, giving you a single, unified, and honest view of your entire community.
 
 ## ✨ Features
 
