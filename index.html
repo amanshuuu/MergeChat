@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>LiveDeck</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23E8301A'/><text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' fill='white' font-family='monospace' font-weight='bold' font-size='16'>LD</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --r: #E8301A;
+  --w: #ffffff;
+  --k: #0a0a0a;
+  --border: 2px solid #0a0a0a;
+  --shadow: 4px 4px 0px #0a0a0a;
+  --f: 'Space Grotesk', sans-serif;
+  --m: 'Space Mono', monospace;
+  --ns: 13px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;font-family:var(--f);background:var(--w);color:var(--k);overflow:hidden;-webkit-font-smoothing:antialiased;}
+
+/* — Animations — */
+@keyframes fadeUp{ from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+@keyframes pop{ 0%{opacity:0;transform:scale(0.9) translateY(10px);} 100%{opacity:1;transform:scale(1) translateY(0);} }
+@keyframes wobble{ 0%,100%{transform:rotate(0deg);} 25%{transform:rotate(-3deg);} 75%{transform:rotate(3deg);} }
+@keyframes slideIn{ from{opacity:0;transform:translateX(10px);} to{opacity:1;transform:translateX(0);} }
+@keyframes press{ 0%{transform:scale(1);} 50%{transform:scale(0.95);} 100%{transform:scale(1);} }
+
+/* ════ SETUP ════ */
+#setup{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--w);z-index:100;overflow-y:auto;}
+.s-nav{display:flex;align-items:center;justify-content:center;padding:24px 20px;border-bottom:var(--border);flex-shrink:0;}
+.s-logo{display:flex;align-items:center;}
+.s-logo-box{display:none;}
+.s-logo-name{font-family:var(--m);font-size:42px;font-weight:900;text-transform:uppercase;letter-spacing:-2px;cursor:pointer;}
+.s-logo-name span{color:var(--r);}
+.s-status{display:flex;align-items:center;gap:6px;font-family:var(--m);font-size:10px;font-weight:700;color:var(--r);border:2px solid var(--r);border-radius:6px;padding:5px 10px;}
+
+.s-hero{padding:40px 20px;background:var(--r);color:var(--w);border-bottom:var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.s-hero h1{font-family:var(--m);font-size:clamp(28px, 6vw, 38px);line-height:1;margin-bottom:8px;text-transform:uppercase;letter-spacing:-1px;}
+.s-hero p{font-size:clamp(12px, 3vw, 15px);opacity:0.9;font-weight:500;max-width:380px;}
+
+.s-form{flex:1;padding:24px 20px;display:flex;flex-direction:column;gap:20px;max-width:440px;margin:0 auto;width:100%;}
+.s-lbl{font-family:var(--m);font-size:10px;font-weight:800;letter-spacing:.1em;display:flex;align-items:center;gap:8px;}
+.s-lbl::before{content:'';width:10px;height:3px;background:var(--r);border-radius:2px;}
+
+.p-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;}
+.p-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border:var(--border);border-radius:10px;background:var(--w);cursor:pointer;transition:all .15s cubic-bezier(0.23, 1, 0.32, 1);box-shadow:3px 3px 0 var(--k);}
+.p-btn:hover{transform:translate(-2px, -2px);box-shadow:5px 5px 0 var(--k);}
+.p-btn:active{transform:translate(1px, 1px);box-shadow:1px 1px 0 var(--k);}
+.p-btn-ico{width:34px;height:34px;border:1.5px solid var(--k);border-radius:8px;background:var(--w);display:flex;align-items:center;justify-content:center;pointer-events:none;}
+.p-btn-ico svg{width:20px;height:20px;pointer-events:none;}
+.p-btn-lbl{font-family:var(--m);font-size:8px;font-weight:800;pointer-events:none;}
+
+.p-btn[data-p="twitch"].on{background:#9146FF;color:#fff;}
+.p-btn[data-p="youtube"].on{background:#FF0000;color:#fff;}
+.p-btn[data-p="kick"].on{background:#53FC18;color:#000;}
+.p-btn[data-p="tiktok"].on{background:#000;color:#fff;}
+.p-btn[data-p="instagram"].on{background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff;}
+.p-btn.on{transform:translate(-2px,-2px);box-shadow:var(--shadow);}
+.p-btn.on .p-btn-lbl{color:#fff;}
+
+.chan-inputs{display:flex;flex-direction:column;gap:12px;}
+.chan-row{display:flex;align-items:center;gap:10px;background:#f8f9fa;padding:10px;border:var(--border);border-radius:12px;}
+.chan-ico{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--k);border-radius:6px;}
+.chan-ico svg{width:16px;height:16px;}
+.chan-inp{flex:1;border:none;background:transparent;font-family:var(--f);font-size:14px;font-weight:600;outline:none;}
+
+.s-cta{width:100%;padding:18px;background:var(--k);color:var(--w);border:var(--border);border-radius:12px;font-family:var(--m);font-size:18px;font-weight:800;cursor:pointer;box-shadow:4px 4px 0 var(--r);transition:all .15s cubic-bezier(0.23, 1, 0.32, 1);}
+.s-cta:hover{transform:translate(-3px,-3px);box-shadow:7px 7px 0 var(--r);}
+.s-cta:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--r);}
+
+/* ════ MODAL ════ */
+#modalWrap{position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;transition:all 0.3s;}
+#modal{background:var(--w);border:var(--border);box-shadow:8px 8px 0 var(--k);width:100%;max-width:360px;padding:24px;animation:pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;}
+.m-title{font-family:var(--m);font-size:16px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.m-title svg{width:24px;height:24px;color:var(--r);}
+.m-text{font-size:13px;line-height:1.5;margin-bottom:20px;color:#555;}
+.m-inp{width:100%;padding:14px;border:var(--border);border-radius:8px;font-family:var(--f);font-size:14px;margin-bottom:20px;outline:none;}
+.m-btns{display:flex;gap:10px;}
+.m-btn{flex:1;padding:12px;border:var(--border);border-radius:8px;font-family:var(--m);font-size:12px;font-weight:800;cursor:pointer;transition:all .1s;}
+.m-btn-ok{background:var(--k);color:var(--w);}
+.m-btn-ok:hover{transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--r);}
+.m-btn-ok:active{transform:translate(1px,1px);box-shadow:0px 0px 0 var(--r);}
+.m-btn-cancel{background:var(--w);color:var(--k);}
+.m-btn-cancel:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--k);}
+
+/* ════ APP ════ */
+#app{position:fixed;inset:0;display:none;flex-direction:column;background:var(--w);}
+.a-bar{display:flex;align-items:center;height:60px;padding:0 16px;background:var(--w);border-bottom:var(--border);flex-shrink:0;gap:10px;}
+.a-logo-box{width:36px;height:36px;background:var(--r);border:var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;box-shadow:2px 2px 0 var(--k);flex-shrink:0;cursor:pointer;}
+.a-logo-box svg{width:22px;height:22px;fill:white;}
+
+.a-pills-wrap{flex:1;position:relative;display:flex;align-items:center;overflow:hidden;}
+.a-pills-wrap::after{content:'';position:absolute;right:0;top:0;bottom:0;width:30px;background:linear-gradient(to right, transparent, var(--w));pointer-events:none;}
+.a-pills{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;padding:0 10px;width:100%;}
+.a-pill{display:flex;align-items:center;gap:4px;height:28px;padding:0 10px;border:2px solid var(--k);border-radius:6px;background:var(--w);font-family:var(--m);font-size:9px;font-weight:800;white-space:nowrap;cursor:pointer;transition:all 0.1s;animation:slideIn 0.3s both;}
+.a-pill.on[data-p="twitch"]{background:#9146FF;color:#fff;}
+.a-pill.on[data-p="youtube"]{background:#FF0000;color:#fff;}
+.a-pill.on[data-p="kick"]{background:#53FC18;color:#000;}
+.a-pill.on[data-p="tiktok"]{background:#000;color:#fff;}
+.a-pill.on[data-p="instagram"]{background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff;}
+.a-pill.on{box-shadow:2px 2px 0 var(--k);}
+.a-pill:active{transform:translate(1px,1px);box-shadow:0px 0px 0 var(--k);}
+.a-pill.off{opacity:.2;border-style:dashed;}
+
+.a-acts{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:nowrap;}
+.a-act{width:34px;height:34px;border-radius:50%;border:2px solid var(--k);background:var(--w);color:var(--k);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:2px 2px 0 var(--k);transition:all 0.1s;flex-shrink:0;}
+.a-act:hover{transform:translate(-1px, -1px);box-shadow:3px 3px 0 var(--k);}
+.a-act:active{transform:translate(1px, 1px);box-shadow:0px 0px 0 var(--k);}
+.a-act.on{background:var(--k);color:var(--w);}
+
+.a-livebar{display:flex;align-items:center;height:36px;padding:0 16px;background:var(--k);border-bottom:var(--border);gap:12px;flex-shrink:0;}
+.lb-live{display:flex;align-items:center;gap:6px;font-family:var(--m);font-size:9px;font-weight:800;color:var(--r);}
+.lb-dot{width:6px;height:6px;border-radius:50%;background:var(--r);animation:blink 1.5s infinite;}
+.lb-stat{font-family:var(--m);font-size:10px;color:rgba(255,255,255,.8);}
+.lb-stat b{color:var(--w);}
+
+/* Custom Slider */
+#fontSizeSlider{appearance:none;height:4px;background:#333;border-radius:2px;outline:none;}
+#fontSizeSlider::-webkit-slider-thumb{appearance:none;width:14px;height:14px;background:var(--r);border:2px solid var(--w);border-radius:50%;cursor:pointer;box-shadow:2px 2px 0 var(--k);}
+
+#feed{flex:1;overflow-y:auto;background:var(--w);padding:10px;position:relative;}
+#feedIframe{position:absolute;inset:0;width:100%;height:100%;border:none;display:none;}
+#freezeShield{position:absolute;inset:0;z-index:10;display:none;background:transparent;}
+.feed-in{display:flex;flex-direction:column;}
+
+.msg{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(0,0,0,.04);animation:fadeUp .2s both;}
+.name-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:2px solid var(--k);border-radius:999px;font-size:12px;font-weight:800;background:var(--w);white-space:nowrap;line-height:1;}
+.name-chip svg{width:14px;height:14px;}
+
+.nc-twitch   {background:#9146FF;color:#fff;}
+.nc-youtube  {background:#FF0000;color:#fff;}
+.nc-kick     {background:#53FC18;color:#000;}
+.nc-tiktok   {background:#000;color:#fff;}
+.nc-instagram{background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff;}
+
+.msg-text{font-size:var(--ns);font-weight:500;color:var(--k);line-height:1.5;flex:1;align-self:center;}
+.emote{height:24px;vertical-align:middle;margin:-2px 2px;}
+
+.a-ticker{height:46px;background:var(--w);border-top:var(--border);display:flex;align-items:center;overflow:hidden;flex-shrink:0;position:relative;}
+.ticker-tag{padding:0 12px;background:var(--r);border-right:var(--border);height:100%;display:flex;align-items:center;font-family:var(--m);font-size:11px;font-weight:800;color:var(--w);letter-spacing:1px;position:relative;z-index:2;flex-shrink:0;}
+.ticker-track{flex:1;overflow:hidden;position:relative;z-index:1;}
+.ticker-belt{display:flex;align-items:center;gap:16px;padding-left:10px;animation:belt 30s linear infinite;}
+@keyframes belt{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+.t-item{display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.t-chip{padding:2px 8px;border:1.5px solid var(--k);border-radius:999px;font-size:10px;font-weight:700;background:var(--k);color:var(--w);display:flex;align-items:center;gap:4px;}
+.t-chip svg{width:10px;height:10px;}
+
+.p-toast{position:fixed;bottom:64px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--k);color:var(--w);padding:10px 24px;border:var(--border);border-radius:8px;display:none;align-items:center;gap:10px;z-index:200;opacity:0;transition:all .2s;}
+.p-toast.on{display:flex;opacity:1;transform:translateX(-50%) translateY(0);}
+
+@media(min-width:640px){
+  body{background:#eff1f3;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .app-wrap{position:relative;width:100%;max-width:400px;height:100%;max-height:820px;border:var(--border);border-radius:32px;background:var(--w);overflow:hidden;}
+  #setup, #app{position:absolute;}
+}
+</style>
+<script src="https://js.pusher.com/8.0/pusher.min.js"></script>
+</head>
+<body>
+<main class="app-wrap">
+<div id="setup">
+  <nav class="s-nav"><div class="s-logo"><div class="s-logo-name">LIVE<span>DECK</span></div></div></nav>
+  <div class="s-hero"><h1>REAL-TIME ONLY</h1><p>No bots. No simulation. Just your real chat.</p></div>
+  <div class="s-form">
+    <div class="s-field"><div class="s-lbl">ACTIVE PLATFORMS</div><div class="p-grid" id="setupGrid"></div></div>
+    <div class="s-field"><div class="s-lbl">CHANNEL SETTINGS</div><div class="chan-inputs" id="chanInputs"></div></div>
+    <div class="s-field"><div class="s-lbl">PRO LINK (OPTIONAL)</div><div class="chan-row"><div class="chan-ico"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg></div><input class="chan-inp" id="inp-pro-link" type="text" placeholder="Restream/Streamlabs URL..."></div></div>
+    <button class="s-cta" onclick="launch()">GO LIVE</button>
+  </div>
+</div>
+
+<div id="modalWrap">
+  <div id="modal">
+    <div class="m-title"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>PRO SOURCE REQUIRED</div>
+    <p class="m-text">To connect <b id="modalPName">YouTube</b>, you need a professional aggregator link from <b>Restream</b> or <b>Streamlabs</b>.</p>
+    <input type="text" class="m-inp" id="modalInp" placeholder="Paste your link here...">
+    <div class="m-btns">
+      <button class="m-btn m-btn-cancel" onclick="closeModal()">CANCEL</button>
+      <button class="m-btn m-btn-ok" onclick="saveModal()">CONNECT</button>
+    </div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="a-bar">
+    <div class="s-logo-name" style="font-size:16px; margin-left:16px; cursor:pointer;" onclick="goSetup()">LIVE<span>DECK</span></div>
+    <div class="a-pills-wrap" id="pillsContainer"><div class="a-pills" id="pillsRow"></div></div>
+    <div class="a-acts" id="actBtns">
+      <button class="a-act" id="pauseBtn" onclick="togglePause()"><svg width="18" height="18" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg></button>
+      <button class="a-act" onclick="clearFeed()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
+      <button class="a-act" onclick="goSetup()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </div>
+  </div>
+  <div class="a-livebar">
+    <div class="lb-live"><div class="lb-dot"></div>LIVE</div>
+    <div class="lb-stat"><b id="viewTxt">0</b> watching</div>
+    <div class="lb-stat"><b id="msgTxt">0</b> msgs</div>
+    <div style="margin-left:auto; display:flex; align-items:center; gap:8px;"><span style="color:#fff; font-size:9px; font-family:var(--m);">Aa</span><input type="range" min="10" max="22" value="13" id="fontSizeSlider" oninput="setSize(this.value)" style="width:60px;"></div>
+  </div>
+  <div id="feed"><div id="freezeShield"></div><iframe id="feedIframe"></iframe><div class="feed-in" id="feedIn"></div></div>
+  <div class="a-ticker"><div class="ticker-tag">CHAT</div><div class="ticker-track"><div class="ticker-belt" id="tickerBelt"></div></div></div>
+</div>
+<div class="p-toast" id="pToast">PAUSED</div>
+</main>
+<script>
+const PICO={
+  twitch:`<svg viewBox="0 0 24 24"><path fill="#9146FF" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>`,
+  youtube:`<svg viewBox="0 0 24 24"><path fill="#FF0000" d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`,
+  kick:`<svg viewBox="0 0 24 24"><path fill="#53FC18" d="M3 3h8v2H9v2h2v2h2V7h2V5h-2V3h8v8h-2v2h2v8h-8v-2h2v-2h-2v-2h-2v2h-2v2h2v2H3V3z"/></svg>`,
+  tiktok:`<svg viewBox="0 0 24 24"><path fill="#000000" d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>`,
+  instagram:`<svg viewBox="0 0 24 24"><defs><linearGradient id="ig" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#f09433"/><stop offset="25%" style="stop-color:#e6683c"/><stop offset="50%" style="stop-color:#dc2743"/><stop offset="75%" style="stop-color:#cc2366"/><stop offset="100%" style="stop-color:#bc1888"/></linearGradient></defs><path fill="url(#ig)" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>`,
+};
+
+let active=new Set(['twitch','kick']);
+let visible=new Set(['twitch','kick']);
+let paused=false,total=0,socket=null,views=0,tickerMsgs=[],bttv=[],ffz=[],pusher=null,viewPoll=null;
+
+function init(){
+  const grid = document.getElementById('setupGrid');
+  Object.keys(PICO).forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'p-btn ' + (active.has(p)?'on':''); 
+    btn.dataset.p = p; btn.onclick = () => toggleP(btn);
+    btn.innerHTML = `<div class="p-btn-ico">${PICO[p]}</div><div class="p-btn-lbl">${p.toUpperCase()}</div>`;
+    grid.appendChild(btn);
+  });
+  loadSettings();
+  updateInputs();
+  fetchEmotes();
+}
+
+function loadSettings(){
+  const s = JSON.parse(localStorage.getItem('sc_settings') || '{}');
+  Object.keys(s).forEach(k => { if(document.getElementById(k)) document.getElementById(k).value = s[k]; });
+}
+function saveSettings(){
+  const s = {};
+  document.querySelectorAll('.chan-inp').forEach(i => { s[i.id] = i.value; });
+  localStorage.setItem('sc_settings', JSON.stringify(s));
+}
+
+function toggleP(btn){
+  const p = btn.dataset.p;
+  const direct = ['twitch','kick'];
+  if(!direct.includes(p) && !active.has(p)){
+    openModal(p, btn);
+    return;
+  }
+  if(active.has(p)){ if(active.size>1){ active.delete(p); btn.classList.remove('on'); } }
+  else { active.add(p); btn.classList.add('on'); }
+  updateInputs();
+}
+
+function openModal(p, btn){
+  document.getElementById('modalPName').textContent = p.charAt(0).toUpperCase() + p.slice(1);
+  document.getElementById('modalWrap').style.display = 'flex';
+  document.getElementById('modalInp').value = document.getElementById('inp-pro-link').value;
+  window._pendingP = {p, btn};
+}
+function closeModal(){ document.getElementById('modalWrap').style.display = 'none'; }
+function saveModal(){
+  const url = document.getElementById('modalInp').value.trim();
+  if(url){
+    document.getElementById('inp-pro-link').value = url;
+    const {p, btn} = window._pendingP;
+    active.add(p); btn.classList.add('on');
+    updateInputs();
+    closeModal();
+  } else {
+    alert("Please enter a valid URL or select a direct platform.");
+  }
+}
+
+function updateInputs(){
+  const container = document.getElementById('chanInputs');
+  container.innerHTML = '';
+  active.forEach(p => {
+    if(p==='twitch' || p==='kick'){
+      const row = document.createElement('div');
+      row.className = 'chan-row';
+      row.innerHTML = `<div class="chan-ico">${PICO[p]}</div><input class="chan-inp" id="inp-${p}" type="text" placeholder="${p.charAt(0).toUpperCase()+p.slice(1)} name">`;
+      container.appendChild(row);
+    }
+  });
+}
+
+async function fetchEmotes(){
+  try {
+    const bRes = await fetch('https://api.betterttv.net/3/emotes/global');
+    if(bRes.ok) bttv = await bRes.json();
+    const fRes = await fetch('https://api.frankerfacez.com/v1/emotes/global');
+    if(fRes.ok) { const d = await fRes.json(); ffz = d.emoticons; }
+  } catch(e){}
+}
+
+function launch(){
+  saveSettings();
+  let proLink = document.getElementById('inp-pro-link').value.trim();
+  if(proLink && !proLink.startsWith('http')) proLink = 'https://' + proLink;
+  
+  const feedIn = document.getElementById('feedIn');
+  const feedIf = document.getElementById('feedIframe');
+
+  document.getElementById('setup').style.display='none';
+  document.getElementById('app').style.display='flex';
+  feedIn.innerHTML='';
+  total=0; views=0; paused=false;
+  document.getElementById('viewTxt').textContent = '0';
+  document.getElementById('msgTxt').textContent = '0';
+  document.getElementById('pauseBtn').classList.remove('on');
+  document.getElementById('pToast').style.display = 'none';
+  
+  visible = new Set(active);
+  buildPills();
+
+  if(proLink) {
+    feedIn.style.display = 'none';
+    feedIf.style.display = 'block';
+    feedIf.src = proLink;
+    const belt = document.getElementById('tickerBelt');
+    belt.style.animation = 'none';
+    belt.innerHTML = `<div class="t-item" style="color:var(--r); font-weight:800; letter-spacing:1px;">PRO AGGREGATOR ACTIVE — ALL CHANNELS SYNCED</div>`;
+  } else {
+    feedIn.style.display = 'flex';
+    feedIf.style.display = 'none';
+    if(active.has('twitch')){
+      let val = document.getElementById('inp-twitch').value.trim();
+      if(val) connectTwitch(val.toLowerCase().replace(/[@#!]/g,''));
+    }
+    if(active.has('kick')){
+      let val = document.getElementById('inp-kick').value.trim();
+      if(val) connectKick(val.toLowerCase().replace(/[@#!]/g,''));
+    }
+    const belt = document.getElementById('tickerBelt');
+    belt.style.animation = 'belt 30s linear infinite';
+    belt.innerHTML = '';
+  }
+  startViewPolling();
+}
+
+function startViewPolling() {
+  if(viewPoll) clearInterval(viewPoll);
+  // Staying at 0 unless real platform data arrives
+  document.getElementById('viewTxt').textContent = '0';
+}
+
+function connectTwitch(channel) {
+  if(socket) socket.close();
+  socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+  socket.onopen = () => {
+    socket.send('CAP REQ :twitch.tv/tags');
+    socket.send('PASS SCHMOOPIE');
+    socket.send('NICK justinfan' + Math.floor(Math.random()*10000));
+    socket.send('JOIN #' + channel);
+  };
+  socket.onmessage = (event) => {
+    event.data.split('\r\n').forEach(line => {
+      if(!line.includes('PRIVMSG')) return;
+      let tags = {}; let msg = line;
+      if(line.startsWith('@')) {
+        const parts = line.split(' :');
+        parts[0].slice(1).split(';').forEach(t => { const [k,v] = t.split('='); tags[k]=v; });
+        msg = parts.slice(1).join(' :');
+      }
+      const match = msg.match(/([^!]+)![^@]+@\S+ PRIVMSG #\S+ :(.+)/);
+      if(match) {
+        const name = tags['display-name'] || match[1];
+        let text = match[2].trim();
+        let isHTML = false;
+        if(tags['emotes']) {
+          isHTML = true;
+          const emotes = tags['emotes'].split('/');
+          const replacements = [];
+          emotes.forEach(e => {
+            const [id, rangeStr] = e.split(':');
+            rangeStr.split(',').forEach(r => { const [start, end] = r.split('-').map(Number); replacements.push({id, start, end}); });
+          });
+          replacements.sort((a,b) => b.start - a.start);
+          replacements.forEach(r => {
+            const img = `<img class="emote" src="https://static-cdn.jtvnw.net/emoticons/v2/${r.id}/default/dark/1.0">`;
+            text = text.slice(0, r.start) + img + text.slice(r.end + 1);
+          });
+        }
+        const words = text.split(' ');
+        let changed = false;
+        const newWords = words.map(w => {
+          const b = bttv.find(e => e.code === w);
+          if(b) { changed=true; return `<img class="emote" src="https://cdn.betterttv.net/emote/${b.id}/1x">`; }
+          const f = ffz.find(e => e.name === w);
+          if(f) { changed=true; return `<img class="emote" src="${f.urls['1']}">`; }
+          return w;
+        });
+        if(changed) { text = newWords.join(' '); isHTML = true; }
+        addMsg({platform:'twitch', name, text, isHTML});
+      }
+    });
+  };
+}
+
+async function connectKick(channelName) {
+  try {
+    const res = await fetch(`https://kick.com/api/v1/channels/${channelName}`);
+    const data = await res.json();
+    if(!data.chatroom) return;
+    if(pusher) pusher.disconnect();
+    pusher = new Pusher('eb1d5f2830814398d275', { cluster: 'mt1' });
+    const channel = pusher.subscribe(`chatrooms.${data.chatroom.id}.v2`);
+    channel.bind('App\\Events\\ChatMessageEvent', (data) => {
+      addMsg({platform:'kick', name: data.sender.username, text: data.content});
+    });
+  } catch(e) {}
+}
+
+function addMsg(m){
+  if(paused || !visible.has(m.platform)) return;
+  const fi=document.getElementById('feedIn');
+  const feed=document.getElementById('feed');
+  const isAtBottom = feed.scrollHeight - feed.scrollTop <= feed.clientHeight + 100;
+  const row=document.createElement('div');
+  row.className='msg';
+  row.innerHTML=`<div class="name-chip nc-${m.platform}">${PICO[m.platform]}${String(m.name)}</div><div class="msg-text">${m.isHTML ? m.text : esc(m.text)}</div>`;
+  fi.appendChild(row);
+  total++;
+  document.getElementById('msgTxt').textContent=total.toLocaleString();
+  pushTicker(m);
+  if(isAtBottom) requestAnimationFrame(() => feed.scrollTo({top:feed.scrollHeight, behavior:'smooth'}));
+  while(fi.children.length>100) fi.removeChild(fi.firstChild);
+}
+
+function buildPills(){
+  const row=document.getElementById('pillsRow');
+  row.innerHTML='';
+  active.forEach(p=>{
+    const el=document.createElement('div');
+    el.className='a-pill on'; 
+    el.dataset.p = p;
+    el.innerHTML=`${p.toUpperCase()}`;
+    el.onclick=()=>{ 
+      el.classList.toggle('off'); 
+      if(el.classList.contains('off')) {
+        el.classList.remove('on');
+        visible.delete(p); 
+      } else {
+        el.classList.add('on');
+        visible.add(p); 
+      }
+    };
+    row.appendChild(el);
+  });
+}
+
+function pushTicker(m){
+  tickerMsgs.push(m); if(tickerMsgs.length>15) tickerMsgs.shift();
+  const belt=document.getElementById('tickerBelt');
+  belt.innerHTML=tickerMsgs.map(d=>`<div class="t-item"><div class="t-chip">${PICO[d.platform]}${d.name}</div><div class="t-msg">${d.text}</div></div>`).join('');
+}
+
+function togglePause(){ 
+  paused=!paused; 
+  document.getElementById('pauseBtn').classList.toggle('on'); 
+  document.getElementById('pToast').style.display=paused?'flex':'none';
+  // Pro Trick: Shield for Iframe mode
+  const proLink = document.getElementById('inp-pro-link').value.trim();
+  if(proLink) document.getElementById('freezeShield').style.display = paused ? 'block' : 'none';
+}
+function clearFeed(){ 
+  const proLink = document.getElementById('inp-pro-link').value.trim();
+  if(proLink) {
+    const ifr = document.getElementById('feedIframe');
+    ifr.src = ifr.src; // Pro Trick: Refresh to clear
+  } else {
+    document.getElementById('feedIn').innerHTML=''; 
+    total=0; 
+    document.getElementById('msgTxt').textContent='0'; 
+  }
+}
+function goSetup(){ 
+  if(socket) socket.close(); 
+  if(pusher) pusher.disconnect(); 
+  clearInterval(viewPoll);
+  document.getElementById('app').style.display='none'; 
+  document.getElementById('setup').style.display='flex'; 
+}
+function showToast(txt, dur=2000){
+  const t = document.getElementById('pToast');
+  t.textContent = txt; t.style.display = 'flex'; t.classList.add('on');
+  setTimeout(() => { t.classList.remove('on'); t.style.display = 'none'; }, dur);
+}
+function setSize(v){ document.documentElement.style.setProperty('--ns', v + 'px'); }
+const esc=(s)=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+init();
+</script>
+</body>
+</html>
