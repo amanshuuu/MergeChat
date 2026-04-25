@@ -1,6 +1,6 @@
-# 🔴 LiveDeck PRO Aggregator
+# 🔴 AllChat PRO Aggregator
 
-**LiveDeck** is a high-performance, real-time multi-platform chat aggregator designed for professional streamers. It combines direct WebSocket connections for Twitch and Kick with an integrated "Pro" mode for Restream/Streamlabs, giving you a single, unified, and honest view of your entire community.
+**AllChat** is a high-performance, real-time multi-platform chat aggregator designed for professional streamers. It combines direct WebSocket connections for Twitch and Kick with an integrated "Pro" mode for Restream/Streamlabs, giving you a single, unified, and honest view of your entire community.
 
 ## ✨ Features
 
